@@ -1,13 +1,13 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { supabase } from "../supabaseClient"
 
-export default function Settings() {
+export default function Settings({ user }) {
   const [activeTab, setActiveTab] = useState("profile")
   const [profile, setProfile] = useState({
-    name: "Osita Daniel",
-    email: "osita@blast.app",
-    role: "Product Manager",
-    status: "🟢 Active",
-    bio: "Building Blast — an AI-powered workspace for modern teams.",
+    name: "",
+    email: "",
+    role: "",
+    bio: "",
     timezone: "Africa/Lagos",
   })
   const [notifications, setNotifications] = useState({
@@ -25,6 +25,54 @@ export default function Settings() {
     aiPanelVisible: true,
   })
   const [saved, setSaved] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    fetchProfile()
+  }, [])
+
+  const fetchProfile = async () => {
+    setLoading(true)
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", user.id)
+      .single()
+
+    if (!error && data) {
+      setProfile({
+        name: data.name || "",
+        email: data.email || user.email || "",
+        role: data.role || "",
+        bio: data.bio || "",
+        timezone: data.timezone || "Africa/Lagos",
+      })
+    }
+    setLoading(false)
+  }
+
+  const saveProfile = async () => {
+    setSaving(true)
+    const { error } = await supabase
+      .from("profiles")
+      .update({
+        name: profile.name,
+        role: profile.role,
+        bio: profile.bio,
+        timezone: profile.timezone,
+        avatar: profile.name
+          .split(" ")
+          .map(n => n[0])
+          .join("")
+          .toUpperCase()
+          .slice(0, 2),
+      })
+      .eq("id", user.id)
+
+    setSaving(false)
+    if (!error) showSaved()
+  }
 
   const showSaved = () => {
     setSaved(true)
@@ -71,8 +119,8 @@ export default function Settings() {
 
         {/* Save toast */}
         {saved && (
-          <div className="fixed top-4 right-4 bg-green-500 text-white text-sm px-4 py-2 rounded-lg shadow-lg z-50">
-            ✓ Changes saved
+          <div className="fixed top-4 right-4 bg-green-500 text-white text-sm px-4 py-2 rounded-lg shadow-lg z-50 flex items-center gap-2">
+            <span>✓</span> Changes saved
           </div>
         )}
 
@@ -82,54 +130,75 @@ export default function Settings() {
             <h2 className="text-lg font-medium text-white mb-1">Profile</h2>
             <p className="text-sm text-white/40 mb-6">Manage your personal information</p>
 
-            {/* Avatar */}
-            <div className="flex items-center gap-4 mb-8">
-              <div className="w-16 h-16 rounded-full bg-[#7F77DD] flex items-center justify-center text-xl font-medium text-white">
-                OD
+            {loading ? (
+              <div className="flex items-center justify-center py-20">
+                <div className="w-6 h-6 rounded-full border-2 border-[#7F77DD] border-t-transparent animate-spin" />
               </div>
-              <div>
-                <button className="text-sm text-[#7F77DD] hover:text-white transition-colors">
-                  Change avatar
-                </button>
-                <p className="text-xs text-white/30 mt-1">JPG, PNG up to 2MB</p>
-              </div>
-            </div>
-
-            <div className="flex flex-col gap-4">
-              {[
-                { label: "Full name", key: "name", type: "text" },
-                { label: "Email address", key: "email", type: "email" },
-                { label: "Role / Title", key: "role", type: "text" },
-                { label: "Timezone", key: "timezone", type: "text" },
-              ].map((field) => (
-                <div key={field.key}>
-                  <label className="block text-xs text-white/50 mb-1.5">{field.label}</label>
-                  <input
-                    type={field.type}
-                    value={profile[field.key]}
-                    onChange={(e) => setProfile({ ...profile, [field.key]: e.target.value })}
-                    className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-sm text-white outline-none focus:border-[#7F77DD] transition-colors"
-                  />
+            ) : (
+              <>
+                {/* Avatar */}
+                <div className="flex items-center gap-4 mb-8">
+                  <div className="w-16 h-16 rounded-full bg-[#7F77DD] flex items-center justify-center text-xl font-medium text-white">
+                    {profile.name
+                      ? profile.name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2)
+                      : "?"}
+                  </div>
+                  <div>
+                    <p className="text-sm text-white font-medium">{profile.name || "Your name"}</p>
+                    <p className="text-xs text-white/30 mt-0.5">{profile.email}</p>
+                  </div>
                 </div>
-              ))}
 
-              <div>
-                <label className="block text-xs text-white/50 mb-1.5">Bio</label>
-                <textarea
-                  value={profile.bio}
-                  onChange={(e) => setProfile({ ...profile, bio: e.target.value })}
-                  rows={3}
-                  className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-sm text-white outline-none focus:border-[#7F77DD] transition-colors resize-none"
-                />
-              </div>
+                <div className="flex flex-col gap-4">
+                  {[
+                    { label: "Full name", key: "name", type: "text", placeholder: "Osita Daniel" },
+                    { label: "Role / Title", key: "role", type: "text", placeholder: "Product Manager" },
+                    { label: "Timezone", key: "timezone", type: "text", placeholder: "Africa/Lagos" },
+                  ].map((field) => (
+                    <div key={field.key}>
+                      <label className="block text-xs text-white/50 mb-1.5">{field.label}</label>
+                      <input
+                        type={field.type}
+                        value={profile[field.key]}
+                        onChange={(e) => setProfile({ ...profile, [field.key]: e.target.value })}
+                        placeholder={field.placeholder}
+                        className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-sm text-white placeholder-white/20 outline-none focus:border-[#7F77DD] transition-colors"
+                      />
+                    </div>
+                  ))}
 
-              <button
-                onClick={showSaved}
-                className="bg-[#7F77DD] hover:bg-[#6860cc] text-white text-sm px-4 py-2.5 rounded-lg transition-colors w-fit"
-              >
-                Save changes
-              </button>
-            </div>
+                  <div>
+                    <label className="block text-xs text-white/50 mb-1.5">Email address</label>
+                    <input
+                      type="email"
+                      value={profile.email}
+                      disabled
+                      className="w-full bg-white/3 border border-white/5 rounded-lg px-4 py-2.5 text-sm text-white/30 outline-none cursor-not-allowed"
+                    />
+                    <p className="text-xs text-white/20 mt-1">Email cannot be changed here</p>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs text-white/50 mb-1.5">Bio</label>
+                    <textarea
+                      value={profile.bio}
+                      onChange={(e) => setProfile({ ...profile, bio: e.target.value })}
+                      rows={3}
+                      placeholder="Tell your team about yourself"
+                      className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-sm text-white placeholder-white/20 outline-none focus:border-[#7F77DD] transition-colors resize-none"
+                    />
+                  </div>
+
+                  <button
+                    onClick={saveProfile}
+                    disabled={saving}
+                    className="bg-[#7F77DD] hover:bg-[#6860cc] disabled:opacity-50 text-white text-sm px-4 py-2.5 rounded-lg transition-colors w-fit"
+                  >
+                    {saving ? "Saving…" : "Save changes"}
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         )}
 
@@ -138,7 +207,6 @@ export default function Settings() {
           <div>
             <h2 className="text-lg font-medium text-white mb-1">Notifications</h2>
             <p className="text-sm text-white/40 mb-6">Choose what you want to be notified about</p>
-
             <div className="flex flex-col gap-3">
               {[
                 { key: "mentions", label: "Mentions", desc: "When someone @mentions you in a channel or DM" },
@@ -148,28 +216,20 @@ export default function Settings() {
                 { key: "projectUpdates", label: "Project updates", desc: "When tasks are completed or projects change" },
                 { key: "emailDigest", label: "Email digest", desc: "Daily summary of workspace activity via email" },
               ].map((item) => (
-                <div
-                  key={item.key}
-                  className="flex items-center justify-between p-4 bg-white/5 border border-white/5 rounded-xl"
-                >
+                <div key={item.key} className="flex items-center justify-between p-4 bg-white/5 border border-white/5 rounded-xl">
                   <div>
                     <p className="text-sm text-white font-medium">{item.label}</p>
                     <p className="text-xs text-white/40 mt-0.5">{item.desc}</p>
                   </div>
                   <button
                     onClick={() => setNotifications({ ...notifications, [item.key]: !notifications[item.key] })}
-                    className={`w-10 h-5 rounded-full transition-colors relative ${
-                      notifications[item.key] ? "bg-[#7F77DD]" : "bg-white/10"
-                    }`}
+                    className={`w-10 h-5 rounded-full transition-colors relative ${notifications[item.key] ? "bg-[#7F77DD]" : "bg-white/10"}`}
                   >
-                    <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all ${
-                      notifications[item.key] ? "left-5" : "left-0.5"
-                    }`} />
+                    <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all ${notifications[item.key] ? "left-5" : "left-0.5"}`} />
                   </button>
                 </div>
               ))}
             </div>
-
             <button onClick={showSaved} className="mt-6 bg-[#7F77DD] hover:bg-[#6860cc] text-white text-sm px-4 py-2.5 rounded-lg transition-colors">
               Save preferences
             </button>
@@ -181,7 +241,6 @@ export default function Settings() {
           <div>
             <h2 className="text-lg font-medium text-white mb-1">Appearance</h2>
             <p className="text-sm text-white/40 mb-6">Customize how Blast looks for you</p>
-
             <div className="flex flex-col gap-6">
               <div>
                 <label className="block text-sm text-white font-medium mb-3">Theme</label>
@@ -193,7 +252,7 @@ export default function Settings() {
                       className={`flex-1 py-3 rounded-xl border text-sm capitalize transition-all ${
                         appearance.theme === t
                           ? "border-[#7F77DD] bg-[#7F77DD]/10 text-white"
-                          : "border-white/10 text-white/40 hover:text-white hover:border-white/20"
+                          : "border-white/10 text-white/40 hover:text-white"
                       }`}
                     >
                       {t === "dark" ? "🌙" : t === "light" ? "☀️" : "💻"} {t}
@@ -201,7 +260,6 @@ export default function Settings() {
                   ))}
                 </div>
               </div>
-
               <div>
                 <label className="block text-sm text-white font-medium mb-3">Font size</label>
                 <div className="flex gap-3">
@@ -220,7 +278,6 @@ export default function Settings() {
                   ))}
                 </div>
               </div>
-
               <div className="flex flex-col gap-3">
                 {[
                   { key: "sidebarCompact", label: "Compact sidebar", desc: "Show icons only in the sidebar" },
@@ -233,19 +290,14 @@ export default function Settings() {
                     </div>
                     <button
                       onClick={() => setAppearance({ ...appearance, [item.key]: !appearance[item.key] })}
-                      className={`w-10 h-5 rounded-full transition-colors relative ${
-                        appearance[item.key] ? "bg-[#7F77DD]" : "bg-white/10"
-                      }`}
+                      className={`w-10 h-5 rounded-full transition-colors relative ${appearance[item.key] ? "bg-[#7F77DD]" : "bg-white/10"}`}
                     >
-                      <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all ${
-                        appearance[item.key] ? "left-5" : "left-0.5"
-                      }`} />
+                      <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all ${appearance[item.key] ? "left-5" : "left-0.5"}`} />
                     </button>
                   </div>
                 ))}
               </div>
             </div>
-
             <button onClick={showSaved} className="mt-6 bg-[#7F77DD] hover:bg-[#6860cc] text-white text-sm px-4 py-2.5 rounded-lg transition-colors">
               Save appearance
             </button>
@@ -257,7 +309,6 @@ export default function Settings() {
           <div>
             <h2 className="text-lg font-medium text-white mb-1">Workspace</h2>
             <p className="text-sm text-white/40 mb-6">Manage your workspace settings and members</p>
-
             <div className="flex flex-col gap-4 mb-8">
               <div>
                 <label className="block text-xs text-white/50 mb-1.5">Workspace name</label>
@@ -265,38 +316,15 @@ export default function Settings() {
               </div>
               <div>
                 <label className="block text-xs text-white/50 mb-1.5">Workspace URL</label>
-                <div className="flex items-center gap-0">
+                <div className="flex">
                   <span className="bg-white/5 border border-white/10 border-r-0 rounded-l-lg px-3 py-2.5 text-sm text-white/30">blast.app/</span>
                   <input defaultValue="blast-hq" className="flex-1 bg-white/5 border border-white/10 rounded-r-lg px-4 py-2.5 text-sm text-white outline-none focus:border-[#7F77DD] transition-colors" />
                 </div>
               </div>
             </div>
-
-            <div>
-              <h3 className="text-sm font-medium text-white mb-3">Members</h3>
-              <div className="flex flex-col gap-2">
-                {[
-                  { name: "Osita Daniel", email: "osita@blast.app", role: "Owner", avatar: "OD" },
-                  { name: "Emmanuel", email: "em@blast.app", role: "Admin", avatar: "EM" },
-                  { name: "Amaka", email: "amaka@blast.app", role: "Member", avatar: "AM" },
-                  { name: "Tunde", email: "tunde@blast.app", role: "Member", avatar: "TK" },
-                ].map((member) => (
-                  <div key={member.email} className="flex items-center gap-3 p-3 bg-white/5 rounded-xl border border-white/5">
-                    <div className="w-8 h-8 rounded-full bg-[#7F77DD] flex items-center justify-center text-xs font-medium text-white">
-                      {member.avatar}
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-sm text-white">{member.name}</p>
-                      <p className="text-xs text-white/30">{member.email}</p>
-                    </div>
-                    <span className="text-xs bg-white/10 text-white/50 px-2 py-0.5 rounded-full">{member.role}</span>
-                  </div>
-                ))}
-              </div>
-              <button className="mt-3 text-sm text-[#7F77DD] hover:text-white transition-colors">
-                + Invite member
-              </button>
-            </div>
+            <button onClick={showSaved} className="bg-[#7F77DD] hover:bg-[#6860cc] text-white text-sm px-4 py-2.5 rounded-lg transition-colors">
+              Save workspace
+            </button>
           </div>
         )}
 
@@ -305,7 +333,6 @@ export default function Settings() {
           <div>
             <h2 className="text-lg font-medium text-white mb-1">Integrations</h2>
             <p className="text-sm text-white/40 mb-6">Connect your tools to Blast AI</p>
-
             <div className="flex flex-col gap-3">
               {[
                 { name: "Gmail", icon: "📧", desc: "Sync emails and extract tasks automatically", connected: false },
@@ -342,8 +369,7 @@ export default function Settings() {
         {activeTab === "account" && (
           <div>
             <h2 className="text-lg font-medium text-white mb-1">Account</h2>
-            <p className="text-sm text-white/40 mb-6">Manage your account security and data</p>
-
+            <p className="text-sm text-white/40 mb-6">Manage your account security</p>
             <div className="flex flex-col gap-4 mb-8">
               <div>
                 <label className="block text-xs text-white/50 mb-1.5">Current password</label>
@@ -360,11 +386,15 @@ export default function Settings() {
 
             <div className="border-t border-white/5 pt-6">
               <h3 className="text-sm font-medium text-red-400 mb-3">Danger zone</h3>
-              <div className="flex flex-col gap-2">
-                <button className="text-sm text-red-400 hover:text-red-300 border border-red-500/20 hover:border-red-500/40 px-4 py-2.5 rounded-lg transition-colors text-left">
-                  Delete my account
-                </button>
-              </div>
+              <button
+                onClick={async () => {
+                  await supabase.auth.signOut()
+                  window.location.reload()
+                }}
+                className="text-sm text-red-400 hover:text-red-300 border border-red-500/20 hover:border-red-500/40 px-4 py-2.5 rounded-lg transition-colors w-full text-left"
+              >
+                Sign out of Blast
+              </button>
             </div>
           </div>
         )}

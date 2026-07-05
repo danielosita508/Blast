@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { supabase } from "../supabaseClient"
 
 export default function Login({ onLogin, onSwitch }) {
   const [email, setEmail] = useState("")
@@ -6,36 +7,40 @@ export default function Login({ onLogin, onSwitch }) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     if (!email || !password) {
       setError("Please fill in all fields.")
       return
     }
     setError("")
     setLoading(true)
-    setTimeout(() => {
-      setLoading(false)
-      onLogin()
-    }, 1500)
+
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    })
+
+    setLoading(false)
+
+    if (error) {
+      setError(error.message)
+      return
+    }
+
+    onLogin(data.user)
   }
 
   return (
     <div className="min-h-screen w-screen bg-[#0f0f10] flex items-center justify-center px-4">
-
-      {/* Background glow */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-[#7F77DD]/10 rounded-full blur-3xl pointer-events-none" />
 
       <div className="w-full max-w-md relative">
-
-        {/* Logo */}
         <div className="flex items-center justify-center gap-2 mb-8">
           <div className="w-8 h-8 rounded-full bg-[#7F77DD]" />
           <span className="text-white font-medium text-xl">Blast</span>
         </div>
 
-        {/* Card */}
         <div className="bg-white/5 border border-white/10 rounded-2xl p-8">
-
           <h1 className="text-xl font-medium text-white mb-1">Welcome back</h1>
           <p className="text-sm text-white/40 mb-6">Sign in to your workspace</p>
 
@@ -45,7 +50,6 @@ export default function Login({ onLogin, onSwitch }) {
             </div>
           )}
 
-          {/* Email */}
           <div className="mb-4">
             <label className="block text-xs text-white/50 mb-1.5">Email address</label>
             <input
@@ -58,7 +62,6 @@ export default function Login({ onLogin, onSwitch }) {
             />
           </div>
 
-          {/* Password */}
           <div className="mb-2">
             <label className="block text-xs text-white/50 mb-1.5">Password</label>
             <input
@@ -71,14 +74,12 @@ export default function Login({ onLogin, onSwitch }) {
             />
           </div>
 
-          {/* Forgot password */}
           <div className="flex justify-end mb-6">
             <button className="text-xs text-[#7F77DD] hover:text-white transition-colors">
               Forgot password?
             </button>
           </div>
 
-          {/* Login button */}
           <button
             onClick={handleLogin}
             disabled={loading}
@@ -86,30 +87,14 @@ export default function Login({ onLogin, onSwitch }) {
           >
             {loading ? "Signing in…" : "Sign in"}
           </button>
-
-          {/* Divider */}
-          <div className="flex items-center gap-3 my-5">
-            <div className="flex-1 h-px bg-white/10" />
-            <span className="text-xs text-white/30">or continue with</span>
-            <div className="flex-1 h-px bg-white/10" />
-          </div>
-
-          {/* Google button */}
-          <button className="w-full bg-white/5 hover:bg-white/10 border border-white/10 text-white text-sm py-2.5 rounded-lg transition-colors flex items-center justify-center gap-2">
-            <span>G</span>
-            <span>Continue with Google</span>
-          </button>
-
         </div>
 
-        {/* Switch to signup */}
         <p className="text-center text-sm text-white/30 mt-5">
           Don't have an account?{" "}
           <button onClick={onSwitch} className="text-[#7F77DD] hover:text-white transition-colors">
             Create one
           </button>
         </p>
-
       </div>
     </div>
   )

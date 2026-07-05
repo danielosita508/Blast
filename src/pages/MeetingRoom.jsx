@@ -7,7 +7,7 @@ const participants = [
   { id: 4, name: "Tunde", avatar: "TK", muted: false, video: true, speaking: false },
 ]
 
-export default function MeetingRoom({ onLeave }) {
+export default function MeetingRoom({ onLeave, meeting }) {
   const [muted, setMuted] = useState(false)
   const [videoOn, setVideoOn] = useState(true)
   const [screenSharing, setScreenSharing] = useState(false)
@@ -41,7 +41,7 @@ export default function MeetingRoom({ onLeave }) {
         <div className="px-6 py-3 flex items-center justify-between border-b border-white/5">
           <div className="flex items-center gap-3">
             <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-            <span className="text-sm font-medium text-white">Blast Frontend Review</span>
+            <span className="text-sm font-medium text-white">{meeting?.title || "Meeting Room"}</span>
             <span className="text-xs text-white/30">{elapsed}</span>
           </div>
           <div className="flex items-center gap-2">

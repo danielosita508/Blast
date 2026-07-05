@@ -3,7 +3,6 @@ const navItems = [
   { id: "channels", icon: "💬", label: "Channels", badge: 3 },
   { id: "messages", icon: "✉️", label: "Direct Messages" },
   { id: "meetings", icon: "🎥", label: "Meetings" },
-  { id: "meetingroom", icon: "📹", label: "Join a call" },
   { id: "tasks", icon: "✓", label: "Tasks", badge: 7 },
   { id: "projects", icon: "📁", label: "Projects" },
   { id: "ai", icon: "✦", label: "AI Assistant" },
